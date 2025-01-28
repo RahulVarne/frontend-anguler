@@ -1,28 +1,30 @@
 pipeline {
     agent any
     stages {
-        stage('pull'){
+        stage('Checkout Code') {
             steps {
                 git branch: 'main', url: 'https://github.com/RahulVarne/frontend-anguler.git'
             }
         }
-        stage('build'){
+        stage('Install Dependencies & Build') {
             steps {
                 sh '''
                     npm install
-                    ng build
+                    ng build --configuration production
                 '''
             }
         }
-        stage('deploy'){
+        stage('Deploy to S3') {
             steps {
-                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'aws-credentials', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                sh ''' 
-                    aws s3 cp --recursive dist/angular-frontend/ s3://cbz-bucket-1-1/
-                ''' 
-                }               
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-credentials'
+                ]]) {
+                    sh '''
+                        aws s3 sync dist/angular-frontend/ s3://cbz-bucket-1-1/ --delete
+                    '''
+                }
             }
-
-        }
-    }
+        }
+    }
 }
